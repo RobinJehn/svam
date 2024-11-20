@@ -5,7 +5,7 @@ import math
 from copy import deepcopy
 
 # Define the size of the forest grid
-GRID_SIZE = 50  # 50x50 grid
+GRID_SIZE = 50
 
 # Species traits
 SPECIES_INFO = {
@@ -87,7 +87,7 @@ def get_neighbors(x, y, forest_grid):
                 if 0 <= nx < GRID_SIZE and 0 <= ny < GRID_SIZE:
                     neighbor = forest_grid[nx][ny]
                     if neighbor:
-                        neighbors.append(neighbor)
+                        neighbors.append((neighbor, (nx, ny)))
     return neighbors
 
 
@@ -103,40 +103,36 @@ def simulate_growth(forest_grid):
             else:
                 # Seed dispersal from neighboring trees
                 potential_trees = []
-                for neighbor in get_neighbors(i, j, forest_grid):
+                for neighbor, (nx, ny) in get_neighbors(i, j, forest_grid):
                     species = neighbor.species
                     dispersal_range = SPECIES_INFO[species]["seed_dispersal_range"]
                     if (
-                        abs(i - (i + dispersal_range)) <= dispersal_range
-                        and abs(j - (j + dispersal_range)) <= dispersal_range
+                        abs(i - nx) <= dispersal_range
+                        and abs(j - ny) <= dispersal_range
                     ):
                         potential_trees.append(species)
                 if potential_trees:
                     # Chance for a new sapling to grow based on neighboring species
                     new_species = random.choice(potential_trees)
                     # Shade tolerance check
-                    shade = len([n for n in get_neighbors(i, j, forest_grid) if n])
+                    shade = len([n[0] for n in get_neighbors(i, j, forest_grid) if n])
                     shade_tolerance = SPECIES_INFO[new_species]["shade_tolerance"]
                     if shade < shade_tolerance:
-                        # Sapling successfully grows
                         new_forest_grid[i][j] = Tree(new_species, age=1)
     return new_forest_grid
 
 
 def simulate_harvest(forest_grid, strategy: str, clearcutting_index: int):
-    harvested_volume = 0  # Initialize harvested volume for this year
+    harvested_volume = 0
     if strategy == "selective":
         # Harvest trees that are above the age threshold
         for i in range(GRID_SIZE):
             for j in range(GRID_SIZE):
                 tree = forest_grid[i][j]
                 if tree and tree.age >= HARVEST_AGE_THRESHOLD:
-                    # Harvest with a certain probability
-                    harvest_probability = HARVEST_PROBABILITY  # Adjust as needed
+                    harvest_probability = HARVEST_PROBABILITY
                     if random.random() < harvest_probability:
-                        # Add the tree's volume to harvested volume
                         harvested_volume += tree.get_volume()
-                        # Harvest the tree
                         forest_grid[i][j] = None
     elif strategy == "clearcutting":
         # Remove all trees in a specific area
