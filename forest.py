@@ -41,7 +41,7 @@ SPECIES_INFO = {
 HARVEST_AGE_THRESHOLD = 50  # Minimum age for a tree to be eligible for harvest
 HARVEST_PROBABILITY = 0.5  # Probability of harvesting a mature tree
 HARVEST_RANDOM_PROBABILITY = 0.1  # Probability of random harvesting
-CLEARCUTTING_AREA = 7  # Size of the clearcutting area
+# CLEARCUTTING_AREA will now be a parameter in functions
 
 
 class Tree:
@@ -122,24 +122,42 @@ def simulate_growth(forest_grid):
     return new_forest_grid
 
 
-def simulate_harvest(forest_grid, strategy: str, clearcutting_index: int):
+def simulate_harvest(
+    forest_grid,
+    strategy: str,
+    clearcutting_index: int,
+    clearcutting_area: int,
+    harvest_age_threshold: int,
+):
     harvested_volume = 0
     if strategy == "selective":
         # Harvest trees that are above the age threshold
         for i in range(GRID_SIZE):
             for j in range(GRID_SIZE):
                 tree = forest_grid[i][j]
-                if tree and tree.age >= HARVEST_AGE_THRESHOLD:
+                if tree and tree.age >= harvest_age_threshold:
                     harvest_probability = HARVEST_PROBABILITY
                     if random.random() < harvest_probability:
                         harvested_volume += tree.get_volume()
                         forest_grid[i][j] = None
-    elif strategy == "clearcutting":
-        # Remove all trees in a specific area
-        x_start = random.randint(0, GRID_SIZE - CLEARCUTTING_AREA)
-        y_start = random.randint(0, GRID_SIZE - CLEARCUTTING_AREA)
-        for i in range(x_start, min(x_start + CLEARCUTTING_AREA, GRID_SIZE)):
-            for j in range(y_start, min(y_start + CLEARCUTTING_AREA, GRID_SIZE)):
+    elif strategy == "clearcutting" or strategy == "systematic_clearcutting":
+        number_of_rows = math.ceil(GRID_SIZE / clearcutting_area)
+        number_of_grids = number_of_rows * number_of_rows
+
+        if strategy == "systematic_clearcutting":
+            grid_col = clearcutting_index % number_of_rows
+            grid_row = clearcutting_index // number_of_rows
+            clearcutting_index = (clearcutting_index + 1) % number_of_grids
+        else:
+            # Random clearcutting
+            grid_col = random.randint(0, number_of_rows - 1)
+            grid_row = random.randint(0, number_of_rows - 1)
+
+        x_start = grid_col * clearcutting_area
+        y_start = grid_row * clearcutting_area
+        # Clearcut the grid
+        for i in range(x_start, min(x_start + clearcutting_area, GRID_SIZE)):
+            for j in range(y_start, min(y_start + clearcutting_area, GRID_SIZE)):
                 tree = forest_grid[i][j]
                 if tree:
                     harvested_volume += tree.get_volume()
@@ -157,22 +175,6 @@ def simulate_harvest(forest_grid, strategy: str, clearcutting_index: int):
         # Clearcut the entire forest
         for i in range(GRID_SIZE):
             for j in range(GRID_SIZE):
-                tree = forest_grid[i][j]
-                if tree:
-                    harvested_volume += tree.get_volume()
-                    forest_grid[i][j] = None
-    elif strategy == "systematic_clearcutting":
-        number_of_rows = math.ceil(GRID_SIZE / CLEARCUTTING_AREA)
-        number_of_grids = number_of_rows * number_of_rows
-        grid_col = clearcutting_index % number_of_rows
-        grid_row = clearcutting_index // number_of_rows
-        clearcutting_index = (clearcutting_index + 1) % number_of_grids
-
-        x_start = grid_col * CLEARCUTTING_AREA
-        y_start = grid_row * CLEARCUTTING_AREA
-        # Clearcut the grid
-        for i in range(x_start, min(x_start + CLEARCUTTING_AREA, GRID_SIZE)):
-            for j in range(y_start, min(y_start + CLEARCUTTING_AREA, GRID_SIZE)):
                 tree = forest_grid[i][j]
                 if tree:
                     harvested_volume += tree.get_volume()
@@ -211,24 +213,132 @@ def display_forest(forest_grid, step):
     plt.show()
 
 
-def run_simulation(years=50, strategy="selective"):
+def run_simulation(
+    years=50,
+    strategy="selective",
+    clearcutting_area=7,
+    harvest_age_threshold=50,
+    display=False,
+):
     forest_grid = initialize_forest(density=0.6)
     clearcutting_index = 0
     total_harvested_volume = []
     for year in range(1, years + 1):
         forest_grid = simulate_growth(forest_grid)
         forest_grid, harvested_volume, clearcutting_index = simulate_harvest(
-            forest_grid, strategy, clearcutting_index
+            forest_grid,
+            strategy,
+            clearcutting_index,
+            clearcutting_area,
+            harvest_age_threshold,
         )
         total_harvested_volume.append(harvested_volume)
-        if year % 10 == 0 or year == 1 or year == years:
+        if display and (year % 10 == 0 or year == 1 or year == years):
             display_forest(forest_grid, year)
-    print(
-        f"Total harvested volume over {years} years: {sum(total_harvested_volume)} cubic meters"
-    )
+    total_volume = sum(total_harvested_volume)
+    if display:
+        print(f"Total harvested volume over {years} years: {total_volume} cubic meters")
+    return total_volume, total_harvested_volume
 
 
 if __name__ == "__main__":
-    # Run the simulation with a chosen harvesting strategy
-    strategy = "systematic_clearcutting"  # Options: 'selective', 'clearcutting', 'all', 'random'
-    run_simulation(years=100, strategy=strategy)
+    # 1. Compare different CLEARCUTTING_AREA values to find the optimal value
+    clearcutting_areas = range(2, 21, 2)  # Testing values from 2 to 20
+    total_volumes = []
+    for area in clearcutting_areas:
+        total_volume, _ = run_simulation(
+            years=100, strategy="systematic_clearcutting", clearcutting_area=area
+        )
+        total_volumes.append(total_volume)
+        print(f"CLEARCUTTING_AREA = {area}, Total Harvested Volume = {total_volume}")
+
+    # Plot the results
+    plt.figure()
+    plt.plot(clearcutting_areas, total_volumes, marker="o")
+    plt.xlabel("CLEARCUTTING_AREA")
+    plt.ylabel("Total Harvested Volume (cubic meters)")
+    plt.title("Total Harvested Volume vs CLEARCUTTING_AREA")
+    plt.grid(True)
+    plt.show()
+
+    # Find the optimal CLEARCUTTING_AREA
+    optimal_index = np.argmax(total_volumes)
+    optimal_clearcutting_area = clearcutting_areas[optimal_index]
+    print(f"Optimal CLEARCUTTING_AREA: {optimal_clearcutting_area}")
+
+    # 2. Run the simulation multiple times for the optimal parameter and plot a histogram
+    num_simulations = 100
+    harvest_volumes = []
+    for _ in range(num_simulations):
+        total_volume, _ = run_simulation(
+            years=100,
+            strategy="systematic_clearcutting",
+            clearcutting_area=optimal_clearcutting_area,
+        )
+        harvest_volumes.append(total_volume)
+
+    # Plot the histogram
+    plt.figure()
+    plt.hist(harvest_volumes, bins=10, edgecolor="black")
+    plt.xlabel("Total Harvested Volume (cubic meters)")
+    plt.ylabel("Frequency")
+    plt.title(
+        f"Distribution of Harvest Volumes over {num_simulations} Simulations\n(CLEARCUTTING_AREA = {optimal_clearcutting_area})"
+    )
+    plt.grid(True)
+    plt.show()
+
+    # 3. Find the optimal HARVEST_AGE_THRESHOLD for selective harvesting
+    harvest_age_thresholds = range(20, 81, 10)  # Testing values from 20 to 80
+    total_volumes_selective = []
+    for threshold in harvest_age_thresholds:
+        total_volume, _ = run_simulation(
+            years=100, strategy="selective", harvest_age_threshold=threshold
+        )
+        total_volumes_selective.append(total_volume)
+        print(
+            f"HARVEST_AGE_THRESHOLD = {threshold}, Total Harvested Volume = {total_volume}"
+        )
+
+    # Plot the results
+    plt.figure()
+    plt.plot(harvest_age_thresholds, total_volumes_selective, marker="o", color="green")
+    plt.xlabel("HARVEST_AGE_THRESHOLD")
+    plt.ylabel("Total Harvested Volume (cubic meters)")
+    plt.title("Total Harvested Volume vs HARVEST_AGE_THRESHOLD (Selective Harvesting)")
+    plt.grid(True)
+    plt.show()
+
+    # Find the optimal HARVEST_AGE_THRESHOLD
+    optimal_index_selective = np.argmax(total_volumes_selective)
+    optimal_harvest_age_threshold = harvest_age_thresholds[optimal_index_selective]
+    print(f"Optimal HARVEST_AGE_THRESHOLD: {optimal_harvest_age_threshold}")
+
+    # 4. Compare the two approaches using their optimal parameters
+    total_volume_clearcutting, _ = run_simulation(
+        years=100,
+        strategy="systematic_clearcutting",
+        clearcutting_area=optimal_clearcutting_area,
+    )
+    total_volume_selective, _ = run_simulation(
+        years=100,
+        strategy="selective",
+        harvest_age_threshold=optimal_harvest_age_threshold,
+    )
+
+    print(
+        f"Total Harvested Volume with Clearcutting (Area {optimal_clearcutting_area}): {total_volume_clearcutting}"
+    )
+    print(
+        f"Total Harvested Volume with Selective Harvesting (Age {optimal_harvest_age_threshold}): {total_volume_selective}"
+    )
+
+    # Plot comparison
+    strategies = ["Clearcutting", "Selective"]
+    volumes = [total_volume_clearcutting, total_volume_selective]
+
+    plt.figure()
+    plt.bar(strategies, volumes, color=["blue", "green"])
+    plt.ylabel("Total Harvested Volume (cubic meters)")
+    plt.title("Comparison of Harvesting Strategies")
+    plt.show()
