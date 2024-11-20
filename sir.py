@@ -7,14 +7,14 @@ import numpy as np  # Import numpy for numerical operations
 
 
 def simulate_sir(
-    graph: Graph, beta: float, gamma: float, initial_infected: list, max_time: int
+    graph: Graph, alpha: float, gamma: float, initial_infected: list, max_time: int
 ):
     """
     Simulate the SIR model on a given graph.
 
     Parameters:
         graph: NetworkX graph
-        beta: infection rate
+        alpha: infection rate
         gamma: recovery rate
         initial_infected: list of initially infected nodes
         max_time: maximum number of time steps to simulate
@@ -44,7 +44,7 @@ def simulate_sir(
                     # Infected node may infect its susceptible neighbors
                     neighbors = list(graph.neighbors(node))
                     for neighbor in neighbors:
-                        if status[neighbor] == "S" and random.random() < beta:
+                        if status[neighbor] == "S" and random.random() < alpha:
                             new_status[neighbor] = "I"
         status = new_status.copy()
 
@@ -193,14 +193,14 @@ def print_graph_statistics(graph: Graph):
 
 
 def run_multiple_simulations(
-    graph: Graph, beta: float, gamma: float, initial_infected: list, max_time: int, num_simulations: int
+    graph: Graph, alpha: float, gamma: float, initial_infected: list, max_time: int, num_simulations: int
 ):
     """
     Runs the SIR simulation multiple times on a given graph and collects the total fraction of population infected.
 
     Parameters:
         graph: NetworkX graph
-        beta: infection rate
+        alpha: infection rate
         gamma: recovery rate
         initial_infected: list of initially infected nodes
         max_time: maximum number of time steps to simulate
@@ -214,7 +214,7 @@ def run_multiple_simulations(
 
     for _ in range(num_simulations):
         S_history, I_history, R_history = simulate_sir(
-            graph, beta, gamma, initial_infected, max_time
+            graph, alpha, gamma, initial_infected, max_time
         )
         total_infected = R_history[-1]  # Total recovered at the end
         total_infected_list.append(total_infected / N)  # Fraction of population infected
@@ -243,7 +243,7 @@ def plot_histograms(infected_ws: list, infected_sd: list):
 
 if __name__ == "__main__":
     # Parameters for the simulation
-    beta = 0.3  # Infection probability
+    alpha = 0.3  # Infection probability
     gamma = 0.2  # Recovery probability
     max_time = 1000  # Maximum number of time steps
     initial_infected = [0, 1, 2, 3, 4, 5]  # Initially infected nodes
@@ -256,8 +256,8 @@ if __name__ == "__main__":
 
     # Run the simulation on both graphs
     ws_graph, sd_graph = init_graphs(N, k, p_rewire, fraction_to_remove)
-    S_ws, I_ws, R_ws = simulate_sir(ws_graph, beta, gamma, initial_infected, max_time)
-    S_sd, I_sd, R_sd = simulate_sir(sd_graph, beta, gamma, initial_infected, max_time)
+    S_ws, I_ws, R_ws = simulate_sir(ws_graph, alpha, gamma, initial_infected, max_time)
+    S_sd, I_sd, R_sd = simulate_sir(sd_graph, alpha, gamma, initial_infected, max_time)
 
     # plot_graphs(ws_graph, sd_graph)
     print_graph_statistics(ws_graph)
@@ -267,10 +267,10 @@ if __name__ == "__main__":
     # Run multiple simulations
     num_simulations = 1000
     infected_ws = run_multiple_simulations(
-        ws_graph, beta, gamma, initial_infected, max_time, num_simulations
+        ws_graph, alpha, gamma, initial_infected, max_time, num_simulations
     )
     infected_sd = run_multiple_simulations(
-        sd_graph, beta, gamma, initial_infected, max_time, num_simulations
+        sd_graph, alpha, gamma, initial_infected, max_time, num_simulations
     )
 
     # Plot histograms
