@@ -3,7 +3,7 @@ import matplotlib.pyplot as plt
 import random
 from networkx.classes import Graph
 import copy
-import numpy as np  # Import numpy for numerical operations
+import numpy as np
 
 
 def simulate_sir(
@@ -193,7 +193,12 @@ def print_graph_statistics(graph: Graph):
 
 
 def run_multiple_simulations(
-    graph: Graph, alpha: float, gamma: float, initial_infected: list, max_time: int, num_simulations: int
+    graph: Graph,
+    alpha: float,
+    gamma: float,
+    initial_infected: list,
+    max_time: int,
+    num_simulations: int,
 ):
     """
     Runs the SIR simulation multiple times on a given graph and collects the total fraction of population infected.
@@ -217,7 +222,9 @@ def run_multiple_simulations(
             graph, alpha, gamma, initial_infected, max_time
         )
         total_infected = R_history[-1]  # Total recovered at the end
-        total_infected_list.append(total_infected / N)  # Fraction of population infected
+        total_infected_list.append(
+            total_infected / N
+        )  # Fraction of population infected
 
     return total_infected_list
 
@@ -232,12 +239,12 @@ def plot_histograms(infected_ws: list, infected_sd: list):
     """
     plt.figure(figsize=(10, 6))
     bins = np.linspace(0, 1, 50)
-    plt.hist(infected_ws, bins=bins, alpha=0.5, label='Watts-Strogatz Graph')
-    plt.hist(infected_sd, bins=bins, alpha=0.5, label='Social Distancing Graph')
-    plt.xlabel('Fraction of Population Infected')
-    plt.ylabel('Frequency')
+    plt.hist(infected_ws, bins=bins, alpha=0.5, label="Watts-Strogatz Graph")
+    plt.hist(infected_sd, bins=bins, alpha=0.5, label="Social Distancing Graph")
+    plt.xlabel("Fraction of Population Infected")
+    plt.ylabel("Frequency")
     plt.legend()
-    plt.title('Histogram of Total Infections over Simulations')
+    plt.title("Histogram of Total Infections over Simulations")
     plt.show()
 
 
@@ -259,7 +266,7 @@ if __name__ == "__main__":
     S_ws, I_ws, R_ws = simulate_sir(ws_graph, alpha, gamma, initial_infected, max_time)
     S_sd, I_sd, R_sd = simulate_sir(sd_graph, alpha, gamma, initial_infected, max_time)
 
-    # plot_graphs(ws_graph, sd_graph)
+    # plot_graphs
     print_graph_statistics(ws_graph)
     print_graph_statistics(sd_graph)
     plot_results(S_ws, I_ws, R_ws, S_sd, I_sd, R_sd)
